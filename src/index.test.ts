@@ -1,18 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { isValidCronExpression, validateCronExpression } from "./index";
+import * as cronKit from "./index";
 
-describe("public API", () => {
-  it("re-exports validateCronExpression", () => {
-    expect(validateCronExpression("0 0 12 * * ?").valid).toBe(true);
+describe("public API (cron-kit)", () => {
+  it("exposes the core functions and error classes", () => {
+    expect(Object.keys(cronKit).sort()).toEqual(
+      [
+        "CronConvertError",
+        "CronParseError",
+        "CronRecurrenceError",
+        "HOUR_INTERVALS",
+        "MINUTE_INTERVALS",
+        "WEEKDAYS",
+        "convert",
+        "format",
+        "fromRecurrence",
+        "isValid",
+        "parse",
+        "toRecurrence",
+        "validate",
+      ].sort()
+    );
   });
 
-  describe("isValidCronExpression", () => {
-    it("returns true for a valid expression", () => {
-      expect(isValidCronExpression("0 0 12 * * ?")).toBe(true);
-    });
-
-    it("returns false for an invalid expression", () => {
-      expect(isValidCronExpression("not a cron expression")).toBe(false);
-    });
+  it("validates end to end", () => {
+    expect(cronKit.isValid("0 0 12 * * ?")).toBe(true);
+    expect(cronKit.validate("not a cron expression").valid).toBe(false);
   });
 });

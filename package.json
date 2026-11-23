@@ -1,7 +1,7 @@
 {
-  "name": "cron-quartz-validator",
-  "version": "2.1.2",
-  "description": "cron quartz expression validator",
+  "name": "cron-kit",
+  "version": "0.1.0",
+  "description": "Cron toolkit: parse, validate, describe (en/es/fr), and compute next runs in any time zone. Quartz and Unix dialects, zero dependencies, built on Temporal and Intl.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,22 +9,35 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./describe": {
+      "types": "./dist/describe.d.ts",
+      "import": "./dist/describe.js"
+    },
+    "./schedule": {
+      "types": "./dist/schedule.d.ts",
+      "import": "./dist/schedule.js"
+    },
+    "./locales/*": {
+      "types": "./dist/locales/*.d.ts",
+      "import": "./dist/locales/*.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andrewaldasoro/cron-quartz-validator.git"
+    "url": "git+https://github.com/andrewaldasoro/cron-kit.git"
   },
-  "homepage": "https://github.com/andrewaldasoro/cron-quartz-validator#readme",
+  "homepage": "https://github.com/andrewaldasoro/cron-kit#readme",
   "bugs": {
-    "url": "https://github.com/andrewaldasoro/cron-quartz-validator/issues"
+    "url": "https://github.com/andrewaldasoro/cron-kit/issues"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -37,7 +50,13 @@
   "keywords": [
     "cron",
     "quartz",
-    "time",
+    "crontab",
+    "schedule",
+    "next-run",
+    "timezone",
+    "temporal",
+    "describe",
+    "i18n",
     "validator"
   ],
   "author": "Andrew Aldasoro",
@@ -45,6 +64,7 @@
   "packageManager": "pnpm@11.16.0",
   "devDependencies": {
     "oxlint": "^1.76.0",
+    "temporal-polyfill": "^1.0.8",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
