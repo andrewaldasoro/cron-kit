@@ -4,7 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Quartz-style cron expression validator, written in TypeScript as a small set of pure functions under `src/`. There is no build step — it's a library consumed as source (`main` points at `src/index.ts`). Tests are colocated next to the code they cover (`src/**/*.test.ts`) and are the source of truth for behavior — if you change a field's semantics, update its test file in the same commit.
+`cron-kit` (formerly `cron-quartz-validator`): a zero-dependency TypeScript cron toolkit. It can parse, validate, format and convert cron expressions, describe them in en/es/fr, compute next/previous runs in any IANA zone, and map a UI recurrence model to cron and back. It supports the Quartz (6–7 fields) and Unix (5 fields, cronie-compatible) dialects. Its main consumer is a separate UI component library for recurring-task inputs.
+
+The package is ESM-only and built with `tsc` to `dist/` (`files: ["dist"]`). Subpath exports:
+
+- `.`: core (`src/index.ts`)
+- `./describe`
+- `./schedule`
+- `./locales/*`
+
+Tests are colocated (`src/**/*.test.ts`) and are the source of truth for behavior. If you change semantics, update the tests in the same commit.
 
 ## Commands
 
@@ -12,25 +21,52 @@ Package manager is pnpm (`packageManager` field in `package.json`).
 
 ```bash
 pnpm i              # install dependencies
-pnpm test           # run the Vitest suite once
+pnpm test           # run the Vitest suite once (vitest.setup.ts loads temporal-polyfill if Temporal isn't native)
 pnpm test:watch     # run Vitest in watch mode
 pnpm typecheck      # tsc --noEmit
-pnpm lint           # oxlint .
+pnpm lint           # oxlint . (if an RTK hook rewrites it to eslint, use `rtk proxy pnpm lint`)
+pnpm build          # tsc -p tsconfig.build.json -> dist/
 ```
 
 ## Architecture
 
-Everything is a pure function — no classes, no shared mutable state. Every `validate*` function takes a string (plus a small context object for the two cross-referencing fields) and returns a `boolean`; nothing is stored on an instance, so there's no equivalent of the old aliasing/accumulation bugs a stateful validator would have.
+Everything is pure functions over one canonical AST. The only exception is `cron-kit/schedule`, which reads the `Temporal` global.
 
-- **Entry point**: `src/validate-cron-expression.ts` exports `validateCronExpression(expression): { valid, errors }`. It splits on whitespace (collapsing repeats), checks the field count (6, or 7 with a year), calls one `validate<Field>` per field, and **collects every field's error** (no short-circuiting) into a fresh `errors` array each call. `src/index.ts` re-exports it and adds `isValidCronExpression(expression): boolean` as sugar for callers who just want a boolean — the return *shape* never depends on a flag (unlike the old `verbose` option).
-- **Shared operator grammar**: `src/utils/operator-grammar.ts`'s `validateOperatorExpression(expression, grammar)` is the one place that understands `*`, lists (`,`), ranges (`-`), and steps (`/`) — every field routes through it instead of re-implementing the same split/recurse logic. A `grammar` is just `{ isValidAtom, resolveOrderValue }`: `isValidAtom` decides if a single token (no operators) is valid for this field (bounds check, and/or a name like `JAN`/`SUN`); `resolveOrderValue` maps a token to a comparable number so ranges/steps can enforce ascending order (returning `NaN` opts a token out of the order check, e.g. an unresolvable name). Add a new operator here, once, rather than per field.
-- **Field modules** (`src/fields/`): `time-fields.ts` covers seconds/minutes/hours/year (identical shape, different `Boundaries` — see `validateBoundedNumericField`). `day-of-month.ts`, `month.ts`, `day-of-week.ts` each handle their own special tokens (`*`/`?` mutual-exclusivity, `L`/`LW`, `#N`) before falling through to the shared grammar for everything else.
-- **Mutual exclusivity of day-of-month/day-of-week**: Quartz requires exactly one of the two to be `*`/`?`. `validateDayOfMonth(value, { dayOfWeek })` and `validateDayOfWeek(value, { dayOfMonth })` take the sibling field's raw value explicitly as a parameter — no hidden `this` state.
-- **Errors**: `src/errors.ts` (`CRON_ERRORS`) is a flat catalog with exactly one entry per real failure case — no unused/dead messages. The orchestrator maps a failing field to the right message itself (see `resolveDayOfMonthError`/`resolveDayOfWeekError` in `validate-cron-expression.ts`); field validators never know about error text.
-- **Numeric parsing**: `src/utils/parse-cron-int.ts`'s `parseCronInt()` is the only numeric coercion path (`^[-+]?\d+$`, so `"Infinity"` is rejected, unlike the old regex). Boundary checks (`isWithinBoundaries`) rely on `NaN` comparisons always being `false` — keep using `parseCronInt`/`isWithinBoundaries` rather than `parseInt`/manual checks.
-
-Fixed relative to the original class-based version (previously undocumented bugs, corrected during the functional rewrite): day-of-week's numeric bound was `1-12` instead of `1-7`; its `#N` occurrence check bounded the weekday against `31` instead of `7`; day-of-week comma-lists were validated against month rules instead of weekday rules; `month` ranges never checked that start ≤ end (now enforced for all ranges, via `resolveOrderValue`).
+- **AST** (`src/core/types.ts`): `Cron = { dialect, source, fields }`. Each field is `any` | `none` (Quartz `?`) | `list` of items. Items are `value`, `range`, `step`, plus the day specials `lastDay` (`L`, `L-n`), `nearestWeekday` (`nW`), `lastWeekday` (`LW`), `lastDayOfWeek` (`nL`) and `nthDayOfWeek` (`n#k`).
+  - **Day-of-week is canonical 0 = Sunday … 6 = Saturday in every dialect.** Quartz 1–7 and Unix 0–7 are mapped at parse/format time (`src/core/dialects.ts`).
+  - Unix ranges that reach 7 are split or expanded, never wrapped.
+- **Parsing**:
+  - `src/core/parse.ts` handles field count, dialect detection, Unix macros, and the Quartz "exactly one `?`" rule. It collects every field's error (no short-circuiting).
+  - Fields go through `src/core/fields.ts`. Day specials are handled there; everything else goes through `src/utils/operator-grammar.ts`'s `parseOperatorExpression`, the one place that understands `*`, `,`, `-` and `/`. Add a new operator there, once.
+  - `parseCronInt` (`src/utils/parse-cron-int.ts`) is the only numeric coercion path.
+  - Per-dialect bounds, names, max steps and whether specials are allowed are data in `src/core/dialects.ts`. A new dialect = a config there plus adapter tweaks.
+- **Errors** (`src/core/errors.ts`): `CronError = { code, field?, params, message }`.
+  - One code per real failure case. English text lives in `englishErrorMessage`, which is also the `en` locale's formatter.
+  - `CronParseError` is thrown by functions taking `string | Cron` (`resolveCron`). `CronConvertError` is thrown by `convert`/`format` across dialects.
+- **Format/convert** (`src/core/format.ts`): day-of-week values and ranges are written as names, so 0- vs 1-based numbering can't be confused.
+  - Converting re-parses the output in the target dialect as a safety net.
+  - Unix DOM/DOW OR, and AND-with-leading-`*` where both day fields are restricted, can't be expressed in Quartz, so converting them throws.
+- **Unix day rule**: Vixie/cronie combine DOM and DOW with **AND if either field starts with `*`** (including `*/n`), otherwise **OR**. See `startsWithWildcard` in `src/core/ast.ts`. The matcher, describer and converter all depend on it.
+- **Schedule** (`src/schedule.ts` + `src/schedule/`):
+  - `compile.ts` expands fields to sorted arrays and builds a per-(year, month) day matcher.
+  - `search.ts` does a field-by-field wall-clock search in "wall seconds", using `civil.ts` (pure Gregorian math, no Temporal).
+  - `zone.ts` is the only code touching Temporal: offsets and transitions, split into constant-offset `Segment`s.
+  - `engine.ts` combines them per segment and applies the DST policy for gaps and overlaps.
+- **DST defaults mirror the real scheduler** (`defaultDstPolicy`):
+  - Quartz: gap → `later` (Java Calendar lenient, 02:30 → 03:30), overlap → `first`.
+  - Unix fixed-time job (minute and hour don't start with `*`): gap → `transition`, overlap → `first`.
+  - Unix wildcard job: gap → `skip`, overlap → `all` (cronie).
+  - `matches()` ignores DST policy on purpose.
+  - `src/schedule/engine.oracle.test.ts` cross-checks the engine against a brute-force Temporal oracle around real transitions. Keep it green when touching the engine.
+- **Describe** (`src/describe/`):
+  - `describer.ts` normalizes each field to a `Shape` and asks a `Locale` (`src/describe/locale.ts`) for phrase fragments. It joins them with ", " and capitalizes.
+  - Names, times and lists come from `Intl` (`intl.ts`), so locale packs (`src/locales/{en,es,fr}.ts`) only hold grammar and error text.
+- **Recurrence** (`src/recurrence/`): the UI model (`minutely` | `hourly` | `daily` | `weekly` | `monthly` | `yearly`).
+  - Restricted to what cron expresses faithfully: intervals that divide 60/24, `at = { hours[], minute, second? }`.
+  - `toRecurrence` returns null for anything else.
+- **No Temporal at the root**: `cron-kit`, `/describe` and `/locales/*` must never reference Temporal, so they keep working in Safari without a polyfill. `src/schedule.ts` carries `/// <reference lib="esnext.temporal" preserve="true" />` so the emitted `.d.ts` pulls in the Temporal types.
 
 ## Style
 
-Linting is [oxlint](https://oxc.rs/) (Rust-based, no config file, default rule set) — switched from ESLint/typescript-eslint because typescript-eslint has no release supporting TypeScript 7.x.
+- Linting is [oxlint](https://oxc.rs/): Rust-based, no config file, default rule set. It replaced ESLint/typescript-eslint because typescript-eslint has no release supporting TypeScript 7.x.
+- Runtime dependencies: none. Keep it that way. `temporal-polyfill` is a dev dependency used only by `vitest.setup.ts`.
