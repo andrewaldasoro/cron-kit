@@ -1,66 +1,111 @@
-import type { Boundaries } from "../constants.js";
+import { parseCronInt } from "./parse-cron-int.js";
+
+export type Boundaries = readonly [min: number, max: number];
 
 export function isWithinBoundaries(value: number, [min, max]: Boundaries): boolean {
   return value >= min && value <= max;
 }
 
 export interface FieldGrammar {
-  isValidAtom: (token: string) => boolean;
-  resolveOrderValue: (token: string) => number;
+  /** Inclusive bounds, in the field's native numbering (e.g. Quartz day-of-week is 1-7). */
+  bounds: Boundaries;
+  /** Resolves a single token (number or name) to its native value, or NaN. */
+  parseAtom: (token: string) => number;
+  /** Largest allowed increment after `/`; unbounded when omitted. */
+  maxStep?: number;
+  /** Whether a name may start a step (`MON/2`). Defaults to true. */
+  allowNamedStepStart?: boolean;
 }
+
+/** Items in the field's native numbering. Field modules map them to canonical values. */
+export type OperatorItem =
+  | { kind: "value"; value: number }
+  | { kind: "range"; start: number; end: number; step?: number }
+  | { kind: "step"; start: number | "any"; step: number };
+
+export type OperatorExpr = { kind: "any" } | { kind: "list"; items: OperatorItem[] };
+
+export interface OperatorIssue {
+  code: "INVALID_VALUE" | "INVALID_RANGE" | "INVALID_STEP";
+  token: string;
+}
+
+export type OperatorResult = { ok: true; expr: OperatorExpr } | { ok: false; issue: OperatorIssue };
+
+type ItemResult = { ok: true; item: OperatorItem } | { ok: false; issue: OperatorIssue };
 
 /**
- * Shared grammar for cron field values: wildcard, comma lists, dashed
- * ranges, and slash steps. Each field supplies its own notion of "valid
- * atom" and "order value" (e.g. plain bounded numbers, or names like
- * JAN/SUN resolved to a numeric position) and gets list/range/step support
- * for free.
+ * Shared grammar for cron field values: wildcard, comma lists, dashed ranges,
+ * and slash steps. Each field supplies its own bounds and atom resolver (plain
+ * numbers, or names like JAN/SUN) and gets list/range/step parsing for free.
  */
-export function validateOperatorExpression(expression: string, grammar: FieldGrammar): boolean {
-  if (expression === "*") return true;
-  if (expression.includes(",")) return validateList(expression, grammar);
-  if (expression.includes("/")) return validateStep(expression, grammar);
-  if (expression.includes("-")) return validateRange(expression, grammar);
-  return grammar.isValidAtom(expression);
+export function parseOperatorExpression(expression: string, grammar: FieldGrammar): OperatorResult {
+  if (expression === "*") return { ok: true, expr: { kind: "any" } };
+
+  const items: OperatorItem[] = [];
+  for (const token of expression.split(",")) {
+    const result = parseItem(token, grammar);
+    if (!result.ok) return result;
+    items.push(result.item);
+  }
+  return { ok: true, expr: { kind: "list", items } };
 }
 
-function validateList(expression: string, grammar: FieldGrammar): boolean {
-  return expression.split(",").every((item) => validateOperatorExpression(item, grammar));
+function parseItem(token: string, grammar: FieldGrammar): ItemResult {
+  if (token.includes("/")) return parseStep(token, grammar);
+  if (token.includes("-")) return parseRange(token, grammar);
+
+  const value = parseAtom(token, grammar);
+  if (Number.isNaN(value)) return invalid("INVALID_VALUE", token);
+  return { ok: true, item: { kind: "value", value } };
 }
 
-function validateStep(expression: string, grammar: FieldGrammar): boolean {
-  const parts = expression.split("/");
-  if (parts.length !== 2) return false;
+function parseStep(token: string, grammar: FieldGrammar): ItemResult {
+  const parts = token.split("/");
+  if (parts.length !== 2) return invalid("INVALID_STEP", token);
 
-  const [start, increment] = parts;
-  if (!validateOperatorExpression(start, grammar)) return false;
-  if (!grammar.isValidAtom(increment)) return false;
+  const [base, increment] = parts;
+  const step = parseCronInt(increment);
+  const maxStep = grammar.maxStep ?? Number.POSITIVE_INFINITY;
+  if (!(step >= 1 && step <= maxStep)) return invalid("INVALID_STEP", token);
 
-  return isOrdered(start, increment, grammar, (a, b) => a < b);
+  if (grammar.allowNamedStepStart === false && /[a-z]/i.test(base)) {
+    return invalid("INVALID_STEP", token);
+  }
+
+  if (base === "*") return { ok: true, item: { kind: "step", start: "any", step } };
+
+  if (base.includes("-")) {
+    const range = parseRange(base, grammar);
+    if (!range.ok || range.item.kind !== "range") return range;
+    return { ok: true, item: { ...range.item, step } };
+  }
+
+  const start = parseAtom(base, grammar);
+  if (Number.isNaN(start)) return invalid("INVALID_VALUE", base);
+  return { ok: true, item: { kind: "step", start, step } };
 }
 
-function validateRange(expression: string, grammar: FieldGrammar): boolean {
-  const parts = expression.split("-");
-  if (parts.length !== 2) return false;
+function parseRange(token: string, grammar: FieldGrammar): ItemResult {
+  const parts = token.split("-");
+  if (parts.length !== 2) return invalid("INVALID_RANGE", token);
 
-  const [start, end] = parts;
-  if (!grammar.isValidAtom(start) || !grammar.isValidAtom(end)) return false;
+  const [startToken, endToken] = parts;
+  const start = parseAtom(startToken, grammar);
+  if (Number.isNaN(start)) return invalid("INVALID_VALUE", startToken);
+  const end = parseAtom(endToken, grammar);
+  if (Number.isNaN(end)) return invalid("INVALID_VALUE", endToken);
 
-  return isOrdered(start, end, grammar, (a, b) => a <= b);
+  if (start > end) return invalid("INVALID_RANGE", token);
+  return { ok: true, item: { kind: "range", start, end } };
 }
 
-function isOrdered(
-  start: string,
-  end: string,
-  grammar: FieldGrammar,
-  isInOrder: (start: number, end: number) => boolean
-): boolean {
-  const startValue = grammar.resolveOrderValue(start);
-  const endValue = grammar.resolveOrderValue(end);
+/** Native value of a single token, or NaN when it is unknown or out of bounds. */
+function parseAtom(token: string, grammar: FieldGrammar): number {
+  const value = grammar.parseAtom(token);
+  return isWithinBoundaries(value, grammar.bounds) ? value : NaN;
+}
 
-  // When either side has no meaningful order (e.g. "*"), let atom validity
-  // alone decide — there's nothing sensible to compare.
-  if (Number.isNaN(startValue) || Number.isNaN(endValue)) return true;
-
-  return isInOrder(startValue, endValue);
+function invalid(code: OperatorIssue["code"], token: string): ItemResult {
+  return { ok: false, issue: { code, token } };
 }
