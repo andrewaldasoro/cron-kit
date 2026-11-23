@@ -69,7 +69,7 @@ export interface CronError {
   field?: FieldName;
   /** Values interpolated into the message (token, bounds, …). */
   params: Record<string, string | number>;
-  /** English message. Use `formatError` from `cron-kit/describe` for other locales. */
+  /** English message. Use `formatError` from `cron-toolkit/describe` for other locales. */
   message: string;
 }
 

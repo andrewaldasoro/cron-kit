@@ -1,5 +1,5 @@
 {
-  "name": "cron-kit",
+  "name": "cron-toolkit",
   "version": "0.1.1",
   "description": "Cron toolkit: parse, validate, describe (en/es/fr), and compute next runs in any time zone. Quartz and Unix dialects, zero dependencies, built on Temporal and Intl.",
   "type": "module",
@@ -28,6 +28,10 @@
     "dist"
   ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=22"
   },

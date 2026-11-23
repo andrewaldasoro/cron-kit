@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as cronKit from "./index";
 
-describe("public API (cron-kit)", () => {
+describe("public API (cron-toolkit)", () => {
   it("exposes the core functions and error classes", () => {
     expect(Object.keys(cronKit).sort()).toEqual(
       [

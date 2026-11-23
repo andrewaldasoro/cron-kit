@@ -9,7 +9,7 @@ export type { Locale, Nth, TimeText } from "./describe/locale.js";
 export type { HourCycle } from "./describe/intl.js";
 
 export interface DescribeOptions {
-  /** Defaults to English. Import others from `cron-kit/locales/<code>`. */
+  /** Defaults to English. Import others from `cron-toolkit/locales/<code>`. */
   locale?: Locale;
   /** `h12` / `h23`; defaults to the locale's convention (en → h12, es/fr → h23). */
   hourCycle?: HourCycle;

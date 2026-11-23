@@ -1,11 +1,11 @@
-/** Thrown by `cron-kit/schedule` when the runtime has no `Temporal` global. */
+/** Thrown by `cron-toolkit/schedule` when the runtime has no `Temporal` global. */
 export class TemporalUnavailableError extends Error {
   override name = "TemporalUnavailableError";
 
   constructor() {
     super(
       "Temporal is not available in this runtime (e.g. Safari, or Node < 26). " +
-        'Load a polyfill before using cron-kit/schedule, e.g. `import "temporal-polyfill/global"`.'
+        'Load a polyfill before using cron-toolkit/schedule, e.g. `import "temporal-polyfill/global"`.'
     );
   }
 }

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`cron-kit` (formerly `cron-quartz-validator`): a zero-dependency TypeScript cron toolkit. It can parse, validate, format and convert cron expressions, describe them in en/es/fr, compute next/previous runs in any IANA zone, and map a UI recurrence model to cron and back. It supports the Quartz (6–7 fields) and Unix (5 fields, cronie-compatible) dialects. Its main consumer is a separate UI component library for recurring-task inputs.
+`cron-toolkit` (formerly `cron-quartz-validator`; GitHub repo `cron-kit`, but npm rejects `cron-kit` as too similar to the existing `cronkit`): a zero-dependency TypeScript cron toolkit. It can parse, validate, format and convert cron expressions, describe them in en/es/fr, compute next/previous runs in any IANA zone, and map a UI recurrence model to cron and back. It supports the Quartz (6–7 fields) and Unix (5 fields, cronie-compatible) dialects. Its main consumer is a separate UI component library for recurring-task inputs.
 
 The package is ESM-only and built with `tsc` to `dist/` (`files: ["dist"]`). Subpath exports:
 
@@ -30,7 +30,7 @@ pnpm build          # tsc -p tsconfig.build.json -> dist/
 
 ## Architecture
 
-Everything is pure functions over one canonical AST. The only exception is `cron-kit/schedule`, which reads the `Temporal` global.
+Everything is pure functions over one canonical AST. The only exception is `cron-toolkit/schedule`, which reads the `Temporal` global.
 
 - **AST** (`src/core/types.ts`): `Cron = { dialect, source, fields }`. Each field is `any` | `none` (Quartz `?`) | `list` of items. Items are `value`, `range`, `step`, plus the day specials `lastDay` (`L`, `L-n`), `nearestWeekday` (`nW`), `lastWeekday` (`LW`), `lastDayOfWeek` (`nL`) and `nthDayOfWeek` (`n#k`).
   - **Day-of-week is canonical 0 = Sunday … 6 = Saturday in every dialect.** Quartz 1–7 and Unix 0–7 are mapped at parse/format time (`src/core/dialects.ts`).
@@ -64,7 +64,7 @@ Everything is pure functions over one canonical AST. The only exception is `cron
 - **Recurrence** (`src/recurrence/`): the UI model (`minutely` | `hourly` | `daily` | `weekly` | `monthly` | `yearly`).
   - Restricted to what cron expresses faithfully: intervals that divide 60/24, `at = { hours[], minute, second? }`.
   - `toRecurrence` returns null for anything else.
-- **No Temporal at the root**: `cron-kit`, `/describe` and `/locales/*` must never reference Temporal, so they keep working in Safari without a polyfill. `src/schedule.ts` carries `/// <reference lib="esnext.temporal" preserve="true" />` so the emitted `.d.ts` pulls in the Temporal types.
+- **No Temporal at the root**: `cron-toolkit`, `/describe` and `/locales/*` must never reference Temporal, so they keep working in Safari without a polyfill. `src/schedule.ts` carries `/// <reference lib="esnext.temporal" preserve="true" />` so the emitted `.d.ts` pulls in the Temporal types.
 
 ## Style
 

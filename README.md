@@ -1,8 +1,8 @@
-# cron-kit
+# cron-toolkit
 
-[![npm version](https://img.shields.io/npm/v/cron-kit.svg)](https://www.npmjs.com/package/cron-kit)
+[![npm version](https://img.shields.io/npm/v/cron-toolkit.svg)](https://www.npmjs.com/package/cron-toolkit)
 [![Test](https://github.com/andrewaldasoro/cron-kit/actions/workflows/test.yml/badge.svg)](https://github.com/andrewaldasoro/cron-kit/actions/workflows/test.yml)
-[![license](https://img.shields.io/npm/l/cron-kit.svg)](./LICENSE)
+[![license](https://img.shields.io/npm/l/cron-toolkit.svg)](./LICENSE)
 
 A small cron toolkit in TypeScript: **parse, validate, format, convert, describe** (English, Spanish, French) and **compute next / previous runs in any time zone**, with DST handling that matches the scheduler that will actually run the job.
 
@@ -15,28 +15,28 @@ A small cron toolkit in TypeScript: **parse, validate, format, convert, describe
 ## Installation
 
 ```bash
-npm install cron-kit
+npm install cron-toolkit
 ```
 
 | Import | What | Needs `Temporal` |
 | --- | --- | --- |
-| `cron-kit` | `parse`, `validate`, `isValid`, `format`, `convert`, `fromRecurrence`, `toRecurrence` | no |
-| `cron-kit/describe` | `describe`, `formatError` | no |
-| `cron-kit/locales/en` · `/es` · `/fr` | locale packs for `describe` / `formatError` | no |
-| `cron-kit/schedule` | `nextRun`, `nextRuns`, `previousRun`, `runs`, `matches` | **yes** |
+| `cron-toolkit` | `parse`, `validate`, `isValid`, `format`, `convert`, `fromRecurrence`, `toRecurrence` | no |
+| `cron-toolkit/describe` | `describe`, `formatError` | no |
+| `cron-toolkit/locales/en` · `/es` · `/fr` | locale packs for `describe` / `formatError` | no |
+| `cron-toolkit/schedule` | `nextRun`, `nextRuns`, `previousRun`, `runs`, `matches` | **yes** |
 
-`Temporal` is built into Node 26+, Chrome/Edge 144+ and Firefox 139+. **Safari** and Node ≤ 24 need a polyfill, loaded once before you use `cron-kit/schedule`:
+`Temporal` is built into Node 26+, Chrome/Edge 144+ and Firefox 139+. **Safari** and Node ≤ 24 need a polyfill, loaded once before you use `cron-toolkit/schedule`:
 
 ```ts
 import "temporal-polyfill/global";
 ```
 
-Without it, `cron-kit/schedule` throws a `TemporalUnavailableError`. Everything else works anywhere.
+Without it, `cron-toolkit/schedule` throws a `TemporalUnavailableError`. Everything else works anywhere.
 
 ## Validate & parse
 
 ```ts
-import { validate, isValid, parse } from "cron-kit";
+import { validate, isValid, parse } from "cron-toolkit";
 
 isValid("0 0 12 * * ?"); // true (Quartz)
 isValid("*/5 * * * *"); // true (Unix)
@@ -61,9 +61,9 @@ Errors carry a stable `code`, the `field` and `params`, so a UI can highlight th
 ## Describe
 
 ```ts
-import { describe, formatError } from "cron-kit/describe";
-import { es } from "cron-kit/locales/es";
-import { fr } from "cron-kit/locales/fr";
+import { describe, formatError } from "cron-toolkit/describe";
+import { es } from "cron-toolkit/locales/es";
+import { fr } from "cron-toolkit/locales/fr";
 
 describe("*/15 9-17 * * MON-FRI");
 // "Every 15 minutes, between 9:00 AM and 5:59 PM, Monday through Friday"
@@ -84,7 +84,7 @@ Day and month names, times and lists come from `Intl`, so they follow each langu
 
 ```ts
 import "temporal-polyfill/global"; // only where Temporal isn't native
-import { nextRun, nextRuns, previousRun, runs, matches } from "cron-kit/schedule";
+import { nextRun, nextRuns, previousRun, runs, matches } from "cron-toolkit/schedule";
 
 nextRuns("0 30 9 ? * MON-FRI", { count: 3, timeZone: "Europe/Madrid" });
 // [Temporal.ZonedDateTime, …] strictly after now
@@ -126,7 +126,7 @@ Override with `dst: { gap: "later" | "transition" | "skip", overlap: "first" | "
 `fromRecurrence` / `toRecurrence` map simple form inputs to cron and back. `toRecurrence` returns `null` when an expression doesn't fit the model, so the UI can fall back to a raw editor.
 
 ```ts
-import { fromRecurrence, toRecurrence, MINUTE_INTERVALS, HOUR_INTERVALS, WEEKDAYS } from "cron-kit";
+import { fromRecurrence, toRecurrence, MINUTE_INTERVALS, HOUR_INTERVALS, WEEKDAYS } from "cron-toolkit";
 
 fromRecurrence(
   { frequency: "weekly", weekdays: ["MON", "TUE", "WED", "THU", "FRI"], at: { hours: [9], minute: 0 } },
@@ -158,7 +158,7 @@ Invalid input, or a dialect that can't express the recurrence, throws `CronRecur
 ## Format & convert
 
 ```ts
-import { format, convert } from "cron-kit";
+import { format, convert } from "cron-toolkit";
 
 format("0 15 10 ? * mon-fri"); // "0 15 10 ? * MON-FRI" (weekdays as names, so 0- vs 1-based numbering can't be confused)
 convert("0 30 9 ? * MON-FRI", { to: "unix" }); // "30 9 * * MON-FRI"
