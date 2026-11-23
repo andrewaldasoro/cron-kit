@@ -1,6 +1,6 @@
 {
   "name": "cron-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cron toolkit: parse, validate, describe (en/es/fr), and compute next runs in any time zone. Quartz and Unix dialects, zero dependencies, built on Temporal and Intl.",
   "type": "module",
   "main": "./dist/index.js",
