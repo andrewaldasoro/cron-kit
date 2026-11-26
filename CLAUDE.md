@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`cron-toolkit` (formerly `cron-quartz-validator`; GitHub repo `cron-kit`, but npm rejects `cron-kit` as too similar to the existing `cronkit`): a zero-dependency TypeScript cron toolkit. It can parse, validate, format and convert cron expressions, describe them in en/es/fr, compute next/previous runs in any IANA zone, and map a UI recurrence model to cron and back. It supports the Quartz (6–7 fields) and Unix (5 fields, cronie-compatible) dialects. Its main consumer is a separate UI component library for recurring-task inputs.
+`cron-toolkit` (formerly `cron-quartz-validator`; npm rejects `cron-kit` as too similar to the existing `cronkit`): a zero-dependency TypeScript cron toolkit. It can parse, validate, format and convert cron expressions, describe them in en/es/fr, compute next/previous runs in any IANA zone, and map a UI recurrence model to cron and back. It supports the Quartz (6–7 fields) and Unix (5 fields, cronie-compatible) dialects. Its main consumer is a separate UI component library for recurring-task inputs.
 
 The package is ESM-only and built with `tsc` to `dist/` (`files: ["dist"]`). Subpath exports:
 

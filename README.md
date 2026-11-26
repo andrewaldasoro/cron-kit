@@ -1,7 +1,7 @@
 # cron-toolkit
 
 [![npm version](https://img.shields.io/npm/v/cron-toolkit.svg)](https://www.npmjs.com/package/cron-toolkit)
-[![Test](https://github.com/andrewaldasoro/cron-kit/actions/workflows/test.yml/badge.svg)](https://github.com/andrewaldasoro/cron-kit/actions/workflows/test.yml)
+[![Test](https://github.com/andrewaldasoro/cron-toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/andrewaldasoro/cron-toolkit/actions/workflows/test.yml)
 [![license](https://img.shields.io/npm/l/cron-toolkit.svg)](./LICENSE)
 
 A small cron toolkit in TypeScript: **parse, validate, format, convert, describe** (English, Spanish, French) and **compute next / previous runs in any time zone**, with DST handling that matches the scheduler that will actually run the job.

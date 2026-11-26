@@ -29,6 +29,5 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-      - run: npm publish --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted Publishing (OIDC via id-token: write): no npm token needed.
+      - run: npm publish

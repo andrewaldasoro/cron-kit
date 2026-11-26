@@ -37,11 +37,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andrewaldasoro/cron-kit.git"
+    "url": "git+https://github.com/andrewaldasoro/cron-toolkit.git"
   },
-  "homepage": "https://github.com/andrewaldasoro/cron-kit#readme",
+  "homepage": "https://github.com/andrewaldasoro/cron-toolkit#readme",
   "bugs": {
-    "url": "https://github.com/andrewaldasoro/cron-kit/issues"
+    "url": "https://github.com/andrewaldasoro/cron-toolkit/issues"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
