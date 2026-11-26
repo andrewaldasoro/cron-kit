@@ -67,9 +67,9 @@
   "license": "ISC",
   "packageManager": "pnpm@11.16.0",
   "devDependencies": {
-    "oxlint": "^1.76.0",
+    "oxlint": "^1.95.0",
     "temporal-polyfill": "^1.0.8",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^5.1.1"
   }
 }
